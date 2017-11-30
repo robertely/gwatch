@@ -1,7 +1,9 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"os"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -9,21 +11,64 @@ import (
 	"time"
 
 	ui "github.com/gizak/termui"
-	flag "github.com/spf13/pflag"
+	getopt "github.com/pborman/getopt/v2"
 )
 
-// https://godoc.org/github.com/pborman/getopt
+type config struct {
+	Arguments []string
+	// Watch flags were going to mock
+	// differences bool // not sure what I could do with this.
+	// precise bool // Naw not going to do this.
+	// chgexit bool // N/A here
+	// color bool // N/A here	// precise bool // Naw not going to do this.
+	Interval float64
+	NoTitle  bool
+	Beep     bool
+	ErrExit  bool
+	Exec     bool
+	Help     bool
+	Version  bool
+	// gwatch specific flags...
+}
+
+var conf = config{
+	Arguments: make([]string, 0, 0),
+	Interval:  2,
+	NoTitle:   false,
+	Beep:      false,
+	ErrExit:   false,
+	Exec:      false,
+	Help:      false,
+	Version:   false}
+
+func shellOutNum(cmd string) (float64, error) {
+	out, err := exec.Command("sh", "-c", cmd).Output()
+	if err != nil {
+		return 0, errors.New("Command could not be executed")
+		// do something more useful here...
+	}
+	r := regexp.MustCompile("[\\d,\\.]+")
+	cleaned := r.FindAllString(string(out), 1)
+	if len(cleaned) == 0 {
+		return 0, errors.New("no numerical output detected")
+	}
+	parsed, _ := strconv.ParseFloat(cleaned[0], 64)
+	return parsed, nil
+}
+
+func warningdialog(msg string) ui.Bufferer {
+	warn := ui.NewPar(msg)
+	warn.Height = 4
+	warn.Width = 34
+	warn.Y = ui.TermHeight()/2 - warn.Height/2
+	warn.X = ui.TermWidth()/2 - warn.Width/2
+	warn.BorderLabel = "Warning"
+	warn.BorderFg = ui.ColorYellow
+	return warn
+}
 
 type timeSeries struct {
 	Series []float64
-}
-
-func shellOutNum(cmd string) float64 {
-	out, _ := exec.Command("sh", "-c", cmd).Output()
-	r := regexp.MustCompile("[\\d,\\.]+")
-	cleaned := r.FindAllString(string(out), 1)
-	parsed, _ := strconv.ParseFloat(cleaned[0], 64)
-	return parsed
 }
 
 func (ts *timeSeries) getMax() (max float64) {
@@ -45,15 +90,40 @@ func (ts *timeSeries) getMin() (min float64) {
 	return
 }
 
+func init() {
+	// watch like function
+	getopt.FlagLong(&conf.Beep, "beep", 'b', "beep if command has a non-zero exit")
+	getopt.FlagLong(&conf.Interval, "interval", 'n', "seconds to wait between updates")
+	getopt.FlagLong(&conf.NoTitle, "no-title", 't', "turn off header")
+	getopt.FlagLong(&conf.ErrExit, "errexit", 'e', "exit if command has a non-zero exit")
+	getopt.FlagLong(&conf.Exec, "exec", 'x', "pass command to exec instead of \"sh -c\"")
+	//meta
+	getopt.FlagLong(&conf.Help, "help", 'h', "display this help and exit")
+	getopt.FlagLong(&conf.Version, "version", 'v', "output version information and exit")
+}
+
 func main() {
 	// parse arguments
-	ConfInterval := flag.Float64P("interval", "n", 1, "seconds to wait between updates")
-	flag.Parse()
-	ConfArguments := flag.Args()
-	fmt.Println(ConfArguments)
+	getopt.Parse()
+	conf.Arguments = getopt.Args()
+	// Version
+	if conf.Version == true {
+		fmt.Println("gwatch from https://github.com/robertely/gwatch 0.0.1")
+		os.Exit(0)
+	}
 
-	if len(ConfArguments) == 0 {
-		flag.Usage()
+	// Help text
+	if conf.Help == true {
+		fmt.Println("graphing watch: expects numerical values, graphs the first one it sees.")
+		fmt.Println("")
+		getopt.Usage()
+		os.Exit(0)
+	}
+
+	// no input handler
+	if len(conf.Arguments) == 0 {
+		getopt.Usage()
+		os.Exit(1)
 	}
 
 	// Build UI
@@ -71,8 +141,9 @@ func main() {
 	g.Data = x.Series
 	g.Height = ui.TermHeight()
 	g.Width = ui.TermWidth()
-	g.BorderLabel = "Every " + strconv.FormatFloat(*ConfInterval, 'f', -1, 64) + "s: " + strings.Join(ConfArguments, " ")
+	g.BorderLabel = "Every " + strconv.FormatFloat(conf.Interval, 'f', -1, 64) + "s: " + strings.Join(conf.Arguments, " ")
 
+	// Handle various keyboard exits.
 	ui.Handle("/sys/kbd/q", func(ui.Event) {
 		ui.StopLoop()
 	})
@@ -88,7 +159,14 @@ func main() {
 	go func() {
 		// none of this math is right. How do you get the capacity of g.Data ???
 		for {
-			nextval := shellOutNum(strings.Join(ConfArguments, " "))
+			nextval, err := shellOutNum(strings.Join(conf.Arguments, " "))
+			if err != nil {
+				warn := warningdialog(err.Error())
+				ui.Render(g, warn)
+				// not a good idea make this an else
+				time.Sleep(time.Millisecond * time.Duration(conf.Interval*1000))
+				continue
+			}
 
 			x.Series = append(x.Series, nextval)
 
@@ -99,8 +177,9 @@ func main() {
 			}
 			g.Width = ui.TermWidth()
 			g.Height = ui.TermHeight()
+			g.DataLabels = []string{""}
 			ui.Render(g)
-			time.Sleep(time.Millisecond * time.Duration(*ConfInterval*1000))
+			time.Sleep(time.Millisecond * time.Duration(conf.Interval*1000))
 		}
 	}()
 

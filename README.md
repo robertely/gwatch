@@ -1,11 +1,11 @@
 # gwatch
-graphing watch
 
-_gwatch_ expects numerical output from a command and graphs the output over time.
-
-Attempts to mimic the cli behavior of procps-ng watch but
+Attempts to mimic the cli behavior of procps-ng `$ watch` but output is graphed (technically plotted) instead of printed.
+`gwatch` will graph the first number it is able to find and discard every thing else.
 
 ```
+graphing watch: expects numerical values, graphs the first one it sees.
+
 Usage: gwatch [-behtvx] [-n value] [parameters ...]
  -b, --beep      beep if command has a non-zero exit
  -e, --errexit   exit if command has a non-zero exit
@@ -32,7 +32,7 @@ Usage: gwatch [-behtvx] [-n value] [parameters ...]
 
 
 ### TODO
-[ ] Handle basic errors that like to crash
+[x] Handle basic errors that like to crash
 
 [ ] reasonable error handling
 

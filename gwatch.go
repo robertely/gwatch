@@ -177,7 +177,7 @@ func main() {
 			}
 			g.Width = ui.TermWidth()
 			g.Height = ui.TermHeight()
-			g.DataLabels = []string{""}
+			// g.DataLabels = []string{}
 			ui.Render(g)
 			time.Sleep(time.Millisecond * time.Duration(conf.Interval*1000))
 		}

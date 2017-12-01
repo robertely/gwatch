@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"math"
 	"os"
 	"os/exec"
 	"regexp"
@@ -20,7 +21,8 @@ type config struct {
 	// differences bool // not sure what I could do with this.
 	// precise bool // Naw not going to do this.
 	// chgexit bool // N/A here
-	// color bool // N/A here	// precise bool // Naw not going to do this.
+	// color bool // N/A here
+	// precise bool // Naw not going to do this.
 	Interval float64
 	NoTitle  bool
 	Beep     bool
@@ -43,16 +45,26 @@ var conf = config{
 
 func shellOutNum(cmd string) (float64, error) {
 	out, err := exec.Command("sh", "-c", cmd).Output()
+	// do literally any thing with the exit code
 	if err != nil {
-		return 0, errors.New("Command could not be executed")
-		// do something more useful here...
+		return 0, errors.New("Exit Non Zero")
 	}
+	// TODO deal with weird people who use "," as a decimal.
+	// TODO deal with "," as a thousands mark.
+	// TODO don't use regex for this. Write a function.
 	r := regexp.MustCompile("[\\d,\\.]+")
 	cleaned := r.FindAllString(string(out), 1)
 	if len(cleaned) == 0 {
-		return 0, errors.New("no numerical output detected")
+		return 0, errors.New("NaN")
 	}
-	parsed, _ := strconv.ParseFloat(cleaned[0], 64)
+	parsed, err := strconv.ParseFloat(cleaned[0], 64)
+	if err != nil {
+		return 0, errors.New("Parse Failure")
+	}
+	// If we have overran float64 or ~1.7*10^308
+	if math.IsInf(parsed, 0) {
+		return parsed, errors.New("Inf")
+	}
 	return parsed, nil
 }
 
@@ -88,6 +100,55 @@ func (ts *timeSeries) getMin() (min float64) {
 		}
 	}
 	return
+}
+
+func renderloop() {
+	// build graph
+	g := ui.NewLineChart()
+	g.Height = ui.TermHeight()
+	g.Width = ui.TermWidth()
+	if conf.NoTitle != true {
+		g.BorderLabel = "Every " + strconv.FormatFloat(conf.Interval, 'f', -1, 64) + "s: " + strings.Join(conf.Arguments, " ")
+	}
+	ts := timeSeries{}
+	// render loop
+	for {
+		nextval, err := shellOutNum(strings.Join(conf.Arguments, " "))
+		if err != nil {
+			if conf.Beep == true {
+				fmt.Fprintf(os.Stdout, "\a")
+			}
+			if conf.ErrExit == true {
+				ui.StopLoop()
+				// report this error somehow
+			}
+			if err.Error() == "Exit Non Zero" {
+				warn := warningdialog("Command exited non-zero\nCheck Escaping")
+				ui.Render(g, warn)
+			} else if err.Error() == "NaN" {
+				warn := warningdialog("No numbers found in output\nCheck Escaping")
+				ui.Render(g, warn)
+			} else {
+				warn := warningdialog("Unknown error occured")
+				ui.Render(g, warn)
+			}
+		} else {
+			ts.Series = append(ts.Series, nextval)
+			// This math is just wrong, but i don't know how to get the "capacity" of g.Data yet....
+			if len(ts.Series) > g.InnerWidth()*2 { // Brail is 2 wide
+				g.Data = ts.Series[(len(ts.Series) - g.InnerWidth()*2):]
+			} else {
+				g.Data = ts.Series
+			}
+			// putting this in the loop deals with window changes.
+			g.Width = ui.TermWidth()
+			g.Height = ui.TermHeight()
+			// i'm not clear how i'm supposed to use this yet either.
+			// g.DataLabels = []string{}
+			ui.Render(g)
+		}
+		time.Sleep(time.Millisecond * time.Duration(conf.Interval*1000))
+	}
 }
 
 func init() {
@@ -135,14 +196,6 @@ func main() {
 		fmt.Print("\033[2J") // Clear
 	}()
 
-	// build graph
-	x := timeSeries{Series: []float64{}}
-	g := ui.NewLineChart()
-	g.Data = x.Series
-	g.Height = ui.TermHeight()
-	g.Width = ui.TermWidth()
-	g.BorderLabel = "Every " + strconv.FormatFloat(conf.Interval, 'f', -1, 64) + "s: " + strings.Join(conf.Arguments, " ")
-
 	// Handle various keyboard exits.
 	ui.Handle("/sys/kbd/q", func(ui.Event) {
 		ui.StopLoop()
@@ -156,40 +209,9 @@ func main() {
 		ui.StopLoop()
 	})
 
-	go func() {
-		// none of this math is right. How do you get the capacity of g.Data ???
-		for {
-			nextval, err := shellOutNum(strings.Join(conf.Arguments, " "))
-			if err != nil {
-				warn := warningdialog(err.Error())
-				ui.Render(g, warn)
-				// not a good idea make this an else
-				time.Sleep(time.Millisecond * time.Duration(conf.Interval*1000))
-				continue
-			}
-
-			x.Series = append(x.Series, nextval)
-
-			if len(x.Series) > ui.TermWidth()*2 { // Brail is 2 wide
-				g.Data = x.Series[len(x.Series)-ui.TermWidth()*2:]
-			} else {
-				g.Data = x.Series
-			}
-			g.Width = ui.TermWidth()
-			g.Height = ui.TermHeight()
-			// g.DataLabels = []string{}
-			ui.Render(g)
-			time.Sleep(time.Millisecond * time.Duration(conf.Interval*1000))
-		}
-	}()
-
-	// ui.Handle("/sys/wnd/resize", func(e ui.Event) {
-	// 	ui.Clear()
-	// 	g.Width = ui.TermWidth()
-	// 	g.Height = ui.TermHeight()
-	// 	ui.Render(g)
-	// })
-
+	// Start rendering
+	go renderloop()
+	// Blocks and reacts to keyboard
 	ui.Loop()
 
 }

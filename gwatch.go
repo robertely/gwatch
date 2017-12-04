@@ -142,18 +142,15 @@ func renderloop() {
 			}
 		} else {
 			ts.Series = append(ts.Series, nextval)
-			// This math is just wrong, but i don't know how to get the "capacity" of g.Data yet....
-			if len(ts.Series) > g.InnerWidth()*2 { // Brail is 2 wide
-				g.Data = ts.Series[(len(ts.Series) - g.InnerWidth()*2):]
+			if len(ts.Series) > g.GetCapacity() {
+				g.Data = ts.Series[(len(ts.Series) - g.GetCapacity()):]
 			} else {
 				g.Data = ts.Series
 			}
 			// putting this in the loop deals with window changes.
 			g.Width = ui.TermWidth()
-			g.Height = ui.TermHeight() - 5
-			fmt.Println(g.InnerWidth() * 2)
-			fmt.Println(g.AxisXCapacity)
-			// i'm not clear how i'm supposed to use this yet either.
+			g.Height = ui.TermHeight()
+			// render
 			ui.Render(g)
 		}
 		time.Sleep(time.Millisecond * time.Duration(conf.Interval*1000))

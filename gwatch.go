@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	ui "github.com/gizak/termui"
 	getopt "github.com/pborman/getopt/v2"
+	ui "github.com/robertely/termui"
 )
 
 type config struct {
@@ -43,7 +43,7 @@ var conf = config{
 	Help:      false,
 	Version:   false}
 
-func shellOutNum(cmd string) (float64, error) {
+func shellOutForNum(cmd string) (float64, error) {
 	out, err := exec.Command("sh", "-c", cmd).Output()
 	// do literally any thing with the exit code
 	if err != nil {
@@ -102,6 +102,14 @@ func (ts *timeSeries) getMin() (min float64) {
 	return
 }
 
+func genXBasic(length int) []string {
+	s := make([]string, length)
+	for i := len(s) - 1; i >= 0; i-- {
+		s[i] = strconv.Itoa(i - (len(s) - 1))
+	}
+	return s
+}
+
 func renderloop() {
 	// build graph
 	g := ui.NewLineChart()
@@ -113,7 +121,7 @@ func renderloop() {
 	ts := timeSeries{}
 	// render loop
 	for {
-		nextval, err := shellOutNum(strings.Join(conf.Arguments, " "))
+		nextval, err := shellOutForNum(strings.Join(conf.Arguments, " "))
 		if err != nil {
 			if conf.Beep == true {
 				fmt.Fprintf(os.Stdout, "\a")
@@ -142,9 +150,10 @@ func renderloop() {
 			}
 			// putting this in the loop deals with window changes.
 			g.Width = ui.TermWidth()
-			g.Height = ui.TermHeight()
+			g.Height = ui.TermHeight() - 5
+			fmt.Println(g.InnerWidth() * 2)
+			fmt.Println(g.AxisXCapacity)
 			// i'm not clear how i'm supposed to use this yet either.
-			// g.DataLabels = []string{}
 			ui.Render(g)
 		}
 		time.Sleep(time.Millisecond * time.Duration(conf.Interval*1000))

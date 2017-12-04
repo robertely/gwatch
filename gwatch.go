@@ -71,6 +71,7 @@ func shellOutForNum(cmd string) (float64, error) {
 	return parsed, nil
 }
 
+// TODO: Not static size.
 func warningdialog(msg string) ui.Bufferer {
 	warn := ui.NewPar(msg)
 	warn.Height = 4

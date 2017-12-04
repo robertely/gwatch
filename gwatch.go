@@ -31,6 +31,9 @@ type config struct {
 	Help     bool
 	Version  bool
 	// gwatch specific flags...
+	ShowStats   bool
+	TruncFloats bool
+	ExecTimeOut int
 }
 
 var conf = config{
@@ -79,11 +82,13 @@ func warningdialog(msg string) ui.Bufferer {
 	return warn
 }
 
+// Frankly unnecessary, but I may want a place to store time stamps as well.
 type timeSeries struct {
 	Series []float64
 }
 
-func (ts *timeSeries) getMax() (max float64) {
+// Gets maximum value in range of ts
+func (ts *timeSeries) getMax(rng int) (max float64) {
 	for _, i := range ts.Series {
 		if i > max {
 			max = i
@@ -92,7 +97,8 @@ func (ts *timeSeries) getMax() (max float64) {
 	return
 }
 
-func (ts *timeSeries) getMin() (min float64) {
+// Gets minumum value in range of ts
+func (ts *timeSeries) getMin(rng int) (min float64) {
 	min = ts.Series[0]
 	for _, i := range ts.Series {
 		if i < min {
@@ -102,25 +108,36 @@ func (ts *timeSeries) getMin() (min float64) {
 	return
 }
 
-func genXBasic(length int) []string {
+// Gets standard deviation in range of ts
+func (ts *timeSeries) getStd(rng int) (min float64) {
+	// TODO: This.
+	return
+}
+
+// This is resposnable for that weird flip you see when the graph fills.
+// Termui doesn't expect g.Data to change and doesn't give you great options.
+// It isn't pretty but at least it's reasonably correct.
+func genXBasic(length int, inverse bool) []string {
 	s := make([]string, length)
-	for i := len(s) - 1; i >= 0; i-- {
-		s[i] = strconv.Itoa(i - (len(s) - 1))
+	if inverse {
+		for i := len(s) - 1; i >= 0; i-- {
+			s[i] = strconv.Itoa(i - (len(s) - 1))
+		}
+	} else {
+		for i := 0; i <= len(s)-1; i++ {
+			s[i] = strconv.Itoa(i)
+		}
 	}
 	return s
 }
 
-func renderloop() {
-	// build graph
-	g := ui.NewLineChart()
-	g.Height = ui.TermHeight()
-	g.Width = ui.TermWidth()
-	if conf.NoTitle != true {
-		g.BorderLabel = "Every " + strconv.FormatFloat(conf.Interval, 'f', -1, 64) + "s: " + strings.Join(conf.Arguments, " ")
-	}
+func renderloop(g *ui.LineChart) {
 	ts := timeSeries{}
 	// render loop
 	for {
+		// putting this in the loop helps to deal with window changes.
+		g.Width = ui.TermWidth()
+		g.Height = ui.TermHeight()
 		nextval, err := shellOutForNum(strings.Join(conf.Arguments, " "))
 		if err != nil {
 			if conf.Beep == true {
@@ -143,16 +160,16 @@ func renderloop() {
 		} else {
 			ts.Series = append(ts.Series, nextval)
 			if len(ts.Series) > g.GetCapacity() {
+				g.DataLabels = genXBasic(g.GetCapacity(), true)
 				g.Data = ts.Series[(len(ts.Series) - g.GetCapacity()):]
 			} else {
+				g.DataLabels = genXBasic(g.GetCapacity(), false)
 				g.Data = ts.Series
 			}
-			// putting this in the loop deals with window changes.
-			g.Width = ui.TermWidth()
-			g.Height = ui.TermHeight()
-			// render
+			// Render
 			ui.Render(g)
 		}
+		// Sleep
 		time.Sleep(time.Millisecond * time.Duration(conf.Interval*1000))
 	}
 }
@@ -173,6 +190,7 @@ func main() {
 	// parse arguments
 	getopt.Parse()
 	conf.Arguments = getopt.Args()
+
 	// Version
 	if conf.Version == true {
 		fmt.Println("gwatch from https://github.com/robertely/gwatch 0.0.1")
@@ -195,8 +213,11 @@ func main() {
 
 	// Build UI
 	if err := ui.Init(); err != nil {
+		ui.Close()
 		panic(err)
 	}
+
+	// Clean up. Not calling this leaves your terminal in a bad state.
 	defer func() {
 		ui.Close()
 		fmt.Print("\033[2J") // Clear
@@ -215,9 +236,24 @@ func main() {
 		ui.StopLoop()
 	})
 
+	// Create graph
+	g := ui.NewLineChart()
+
+	// Set title
+	if conf.NoTitle != true {
+		g.BorderLabel = "Every " + strconv.FormatFloat(conf.Interval, 'f', -1, 64) + "s: " + strings.Join(conf.Arguments, " ")
+	}
+
+	// Handle resize.
+	ui.Handle("/sys/wnd/resize", func(e ui.Event) {
+		g.Width = ui.TermWidth()
+		g.Height = ui.TermHeight()
+		ui.Render(g)
+	})
+
 	// Start rendering
-	go renderloop()
+	go renderloop(g)
+
 	// Blocks and reacts to keyboard
 	ui.Loop()
-
 }

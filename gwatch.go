@@ -15,21 +15,22 @@ import (
 	ui "github.com/robertely/termui"
 )
 
+// config stores run time options
 type config struct {
 	Arguments []string
 	// Watch flags were going to mock
-	// differences bool // not sure what I could do with this.
-	// precise bool // Naw not going to do this.
-	// chgexit bool // N/A here
-	// color bool // N/A here
-	// precise bool // Naw not going to do this.
+	Exec     bool
 	Interval float64
 	NoTitle  bool
 	Beep     bool
 	ErrExit  bool
-	Exec     bool
 	Help     bool
 	Version  bool
+	// differences bool // N/A
+	// precise bool // Naw not going to do this.
+	// chgexit bool // N/A
+	// color bool // N/A
+
 	// gwatch specific flags...
 	ShowStats   bool
 	TruncFloats bool
@@ -46,9 +47,37 @@ var conf = config{
 	Help:      false,
 	Version:   false}
 
-func shellOutForNum(cmd string) (float64, error) {
-	out, err := exec.Command("sh", "-c", cmd).Output()
-	// do literally any thing with the exit code
+// Validate Validates config as populated by getopt
+func (c *config) Validate() {
+	// Version
+	if c.Version == true {
+		fmt.Println("gwatch from https://github.com/robertely/gwatch 0.0.1")
+		os.Exit(0)
+	}
+
+	// Help text
+	if c.Help == true {
+		fmt.Println("graphing watch: expects numerical values, graphs the first one it sees.")
+		fmt.Println("")
+		getopt.Usage()
+		os.Exit(0)
+	}
+
+	// no input handler
+	if len(c.Arguments) == 0 {
+		getopt.Usage()
+		os.Exit(1)
+	}
+}
+
+func shellOutForNum(args []string) (float64, error) {
+	cmd := exec.Command("sh", "-c", strings.Join(args, " "))
+	if conf.Exec == true {
+		cmd = exec.Command(args[0], args[1:]...)
+	}
+	out, err := cmd.Output()
+	// exitCode := what....?
+	//TODO do literally any thing with the exit code [exec.Command().ProcessState????]
 	if err != nil {
 		return 0, errors.New("Exit Non Zero")
 	}
@@ -71,11 +100,28 @@ func shellOutForNum(cmd string) (float64, error) {
 	return parsed, nil
 }
 
-// TODO: Not static size.
+// lineCount counts the nubmer of lines in a string (split on \n)
+func lineCount(s string) int {
+	return len(strings.Split(strings.TrimSuffix(s, "\n"), "\n"))
+}
+
+// maxLineLength take s string and returns the length of the largest single line.
+func maxLineLength(s string) int {
+	i := 0
+	for _, line := range strings.Split(strings.TrimSuffix(s, "\n"), "\n") {
+		if len(line) > i {
+			i = len(line)
+		}
+	}
+	return i
+}
+
+// warningdialog returns a ui.Bufferer displaying msg.
+// The intended use is as a popover.
 func warningdialog(msg string) ui.Bufferer {
 	warn := ui.NewPar(msg)
-	warn.Height = 4
-	warn.Width = 34
+	warn.Height = lineCount(msg) + 2    // 2 is room for boarder
+	warn.Width = maxLineLength(msg) + 3 // 3 adds a little padding.
 	warn.Y = ui.TermHeight()/2 - warn.Height/2
 	warn.X = ui.TermWidth()/2 - warn.Width/2
 	warn.BorderLabel = "Warning"
@@ -83,12 +129,14 @@ func warningdialog(msg string) ui.Bufferer {
 	return warn
 }
 
-// Frankly unnecessary, but I may want a place to store time stamps as well.
+// timeSeries thinly wraps []float64 adding a hard limit(Capacity.)
 type timeSeries struct {
-	Series []float64
+	Series   []float64
+	Capacity int
 }
 
-// Gets maximum value in range of ts
+// getMax Gets maximum value in range of ts
+// rng (range) allows you to work only with the data you are graphing and not the full capacity.
 func (ts *timeSeries) getMax(rng int) (max float64) {
 	for _, i := range ts.Series {
 		if i > max {
@@ -98,7 +146,8 @@ func (ts *timeSeries) getMax(rng int) (max float64) {
 	return
 }
 
-// Gets minumum value in range of ts
+// getMin Gets minumum value in range of ts
+// rng (range) allows you to work only with the data you are graphing and not the full capacity.
 func (ts *timeSeries) getMin(rng int) (min float64) {
 	min = ts.Series[0]
 	for _, i := range ts.Series {
@@ -109,15 +158,17 @@ func (ts *timeSeries) getMin(rng int) (min float64) {
 	return
 }
 
-// Gets standard deviation in range of ts
+// getStd Gets standard deviation in range of ts
+// rng (range) allows you to work only with the data you are graphing and not the full capacity.
 func (ts *timeSeries) getStd(rng int) (min float64) {
 	// TODO: This.
 	return
 }
 
+// genXBasic generates xaxis labels.
 // This is resposnable for that weird flip you see when the graph fills.
-// Termui doesn't expect g.Data to change and doesn't give you great options.
-// It isn't pretty but at least it's reasonably correct.
+// I'm working around termui limitations here. Fixing this in termiu would be an undertaking.
+// If I was inclined to go that far I would probably write my own graphing library.
 func genXBasic(length int, inverse bool) []string {
 	s := make([]string, length)
 	if inverse {
@@ -133,13 +184,13 @@ func genXBasic(length int, inverse bool) []string {
 }
 
 func renderloop(g *ui.LineChart) {
-	ts := timeSeries{}
+	ts := timeSeries{Capacity: 64000}
 	// render loop
 	for {
 		// putting this in the loop helps to deal with window changes.
 		g.Width = ui.TermWidth()
 		g.Height = ui.TermHeight()
-		nextval, err := shellOutForNum(strings.Join(conf.Arguments, " "))
+		nextval, err := shellOutForNum(conf.Arguments)
 		if err != nil {
 			if conf.Beep == true {
 				fmt.Fprintf(os.Stdout, "\a")
@@ -181,7 +232,7 @@ func init() {
 	getopt.FlagLong(&conf.Interval, "interval", 'n', "seconds to wait between updates")
 	getopt.FlagLong(&conf.NoTitle, "no-title", 't', "turn off header")
 	getopt.FlagLong(&conf.ErrExit, "errexit", 'e', "exit if command has a non-zero exit")
-	getopt.FlagLong(&conf.Exec, "exec", 'x', "pass command to exec instead of \"sh -c\"")
+	getopt.FlagLong(&conf.Exec, "exec", 'x', "directly pass command to os.exec instead of \"sh -c\"")
 	//meta
 	getopt.FlagLong(&conf.Help, "help", 'h', "display this help and exit")
 	getopt.FlagLong(&conf.Version, "version", 'v', "output version information and exit")
@@ -191,26 +242,7 @@ func main() {
 	// parse arguments
 	getopt.Parse()
 	conf.Arguments = getopt.Args()
-
-	// Version
-	if conf.Version == true {
-		fmt.Println("gwatch from https://github.com/robertely/gwatch 0.0.1")
-		os.Exit(0)
-	}
-
-	// Help text
-	if conf.Help == true {
-		fmt.Println("graphing watch: expects numerical values, graphs the first one it sees.")
-		fmt.Println("")
-		getopt.Usage()
-		os.Exit(0)
-	}
-
-	// no input handler
-	if len(conf.Arguments) == 0 {
-		getopt.Usage()
-		os.Exit(1)
-	}
+	conf.Validate()
 
 	// Build UI
 	if err := ui.Init(); err != nil {
@@ -245,7 +277,7 @@ func main() {
 		g.BorderLabel = "Every " + strconv.FormatFloat(conf.Interval, 'f', -1, 64) + "s: " + strings.Join(conf.Arguments, " ")
 	}
 
-	// Handle resize.
+	// Handle resize. I strongly suspect this isn't working perfectly in OSX
 	ui.Handle("/sys/wnd/resize", func(e ui.Event) {
 		g.Width = ui.TermWidth()
 		g.Height = ui.TermHeight()

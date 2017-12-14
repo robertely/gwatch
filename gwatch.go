@@ -211,7 +211,7 @@ func renderloop(g *ui.LineChart) {
 			}
 		} else {
 			ts.Series = append(ts.Series, nextval)
-			if len(ts.Series) > g.GetCapacity() {
+			if len(ts.Series) >= g.GetCapacity() {
 				g.DataLabels = genXBasic(g.GetCapacity(), true)
 				g.Data = ts.Series[(len(ts.Series) - g.GetCapacity()):]
 			} else {
@@ -219,6 +219,7 @@ func renderloop(g *ui.LineChart) {
 				g.Data = ts.Series
 			}
 			// Render
+			ui.Clear()
 			ui.Render(g)
 		}
 		// Sleep

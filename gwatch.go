@@ -6,7 +6,6 @@ import (
 	"math"
 	"os"
 	"os/exec"
-	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -83,18 +82,9 @@ func shellOutForNum(args []string) (float64, error) {
 	if err != nil {
 		return 0, errors.New("Exit Non Zero")
 	}
-	// TODO deal with weird people who use "," as a decimal.
-	// TODO deal with "," as a thousands mark.
-	// TODO don't use regex for this. Write a function.
-	r := regexp.MustCompile("[\\d,\\.]+")
-	cleaned := r.FindAllString(string(out), 1)
-	if len(cleaned) == 0 {
-		return 0, errors.New("NaN")
-	}
-	parsed, err := strconv.ParseFloat(cleaned[0], 64)
-	if err != nil {
-		return 0, errors.New("Parse Failure")
-	}
+	parsed, _ := util.ParseOutSingle(string(out))
+	// TODO: check for "strconv.ParseFloat"
+	// TODO: check for "No numeral found"
 	// If we have overran float64 or ~1.7*10^308
 	if math.IsInf(parsed, 0) {
 		return parsed, errors.New("Inf")
@@ -144,9 +134,15 @@ func (ts *timeSeries) getMin(rng int) (min float64) {
 	return
 }
 
-// getStd Gets standard deviation in range of ts
+// getAvg Gets simple average for in range of ts
 // rng (range) allows you to work only with the data you are graphing and not the full capacity.
-func (ts *timeSeries) getStd(rng int) (min float64) {
+func (ts *timeSeries) getAvg(rng int) (avg float64) {
+	return
+}
+
+// getStDev Gets standard deviation in range of ts
+// rng (range) allows you to work only with the data you are graphing and not the full capacity.
+func (ts *timeSeries) getStDev(rng int) (stdev float64) {
 	// TODO: This.
 	return
 }

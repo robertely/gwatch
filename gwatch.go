@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/robertely/termui/util"
+
 	getopt "github.com/pborman/getopt/v2"
 	ui "github.com/robertely/termui"
 )
@@ -100,28 +102,12 @@ func shellOutForNum(args []string) (float64, error) {
 	return parsed, nil
 }
 
-// lineCount counts the nubmer of lines in a string (split on \n)
-func lineCount(s string) int {
-	return len(strings.Split(strings.TrimSuffix(s, "\n"), "\n"))
-}
-
-// maxLineLength take s string and returns the length of the largest single line.
-func maxLineLength(s string) int {
-	i := 0
-	for _, line := range strings.Split(strings.TrimSuffix(s, "\n"), "\n") {
-		if len(line) > i {
-			i = len(line)
-		}
-	}
-	return i
-}
-
 // warningdialog returns a ui.Bufferer displaying msg.
 // The intended use is as a popover.
 func warningdialog(msg string) ui.Bufferer {
 	warn := ui.NewPar(msg)
-	warn.Height = lineCount(msg) + 2    // 2 is room for boarder
-	warn.Width = maxLineLength(msg) + 3 // 3 adds a little padding.
+	warn.Height = util.lineCount(msg) + 2    // 2 is room for boarder
+	warn.Width = util.maxLineLength(msg) + 3 // 3 adds a little padding.
 	warn.Y = ui.TermHeight()/2 - warn.Height/2
 	warn.X = ui.TermWidth()/2 - warn.Width/2
 	warn.BorderLabel = "Warning"

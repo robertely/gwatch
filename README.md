@@ -29,17 +29,3 @@ Usage: gwatch [-behtvx] [-n value] [parameters ...]
 
 ###### Total time for get request via curl:
 `$ gwatch "curl -w "%{time_total}" -o /dev/null -s 'https://google.com'"`
-
-
-### TODO
-[x] Handle basic errors that like to crash
-
-[ ] reasonable error handling
-
-[ ] print a description with Usage
-
-[ ] document...
-
-[ ] literally any testing
-
-[ ] write man Pages

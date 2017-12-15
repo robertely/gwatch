@@ -7,7 +7,8 @@ import (
 	"strings"
 )
 
-func truncate(st string, ln int) string {
+// Truncate a string to ln length
+func Truncate(st string, ln int) string {
 	if ln <= 0 {
 		return ""
 	}
@@ -17,7 +18,10 @@ func truncate(st string, ln int) string {
 	return st
 }
 
-func parseOutSingle(s string) (float64, error) {
+// ParseOutSingle returns float from parsed string.
+// Isolates the fist thing that looks like a number.
+// Hard coded maximim of 1024 characters
+func ParseOutSingle(s string) (float64, error) {
 	r := regexp.MustCompile("(-?[\\d,\\.]+)")
 	isolated := r.FindString(s)
 	if len(isolated) == 0 {
@@ -30,13 +34,13 @@ func parseOutSingle(s string) (float64, error) {
 	return parsed, nil
 }
 
-// lineCount counts the nubmer of lines in a string (split on \n)
-func lineCount(s string) int {
+// LineCount counts the nubmer of lines in a string (split on \n)
+func LineCount(s string) int {
 	return len(strings.Split(strings.TrimSuffix(s, "\n"), "\n"))
 }
 
-// maxLineLength take s string and returns the length of the largest single line.
-func maxLineLength(s string) int {
+// MaxLineLength take s string and returns the length of the largest single line.
+func MaxLineLength(s string) int {
 	i := 0
 	for _, line := range strings.Split(strings.TrimSuffix(s, "\n"), "\n") {
 		if len(line) > i {

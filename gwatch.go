@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/robertely/termui/util"
+	util "github.com/robertely/gwatch/util"
 
 	getopt "github.com/pborman/getopt/v2"
 	ui "github.com/robertely/termui"
@@ -106,8 +106,8 @@ func shellOutForNum(args []string) (float64, error) {
 // The intended use is as a popover.
 func warningdialog(msg string) ui.Bufferer {
 	warn := ui.NewPar(msg)
-	warn.Height = util.lineCount(msg) + 2    // 2 is room for boarder
-	warn.Width = util.maxLineLength(msg) + 3 // 3 adds a little padding.
+	warn.Height = util.LineCount(msg) + 2    // 2 is room for boarder
+	warn.Width = util.MaxLineLength(msg) + 3 // 3 adds a little padding.
 	warn.Y = ui.TermHeight()/2 - warn.Height/2
 	warn.X = ui.TermWidth()/2 - warn.Width/2
 	warn.BorderLabel = "Warning"

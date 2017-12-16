@@ -1,5 +1,8 @@
 language: go
 
+rvm:
+  - 2.4.0
+
 go:
   - 1.8.x
   - master

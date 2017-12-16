@@ -1,0 +1,10 @@
+language: go
+
+before_install:
+  - sudo apt-get -qq update
+  - sudo apt-get install -y build-essential ruby-dev rpm
+  - sudo gem install fpm
+
+go:
+  - 1.8.x
+  - master

@@ -116,7 +116,7 @@ func (ts *timeSeries) append(next float64) {
 	if len(ts.Series) < ts.Capacity {
 		ts.Series = append(ts.Series, next)
 	} else {
-		ts.Series = append(ts.Series[len(ts.Series)-(len(ts.Series)-1):], next)
+		ts.Series = append(ts.Series[1:], next)
 	}
 }
 
@@ -175,7 +175,7 @@ func genXBasic(length int, inverse bool) []string {
 }
 
 func renderloop(g *ui.LineChart) {
-	ts := timeSeries{Capacity: 100}
+	ts := timeSeries{Capacity: 125000} // 1MB/64bits "reasonable maximum"
 	// render loop
 	for {
 		// putting this in the loop helps to deal with window changes.

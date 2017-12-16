@@ -111,6 +111,15 @@ type timeSeries struct {
 	Capacity int
 }
 
+// append adds to ts.Series and truncates when at ts.Capacity
+func (ts *timeSeries) append(next float64) {
+	if len(ts.Series) < ts.Capacity {
+		ts.Series = append(ts.Series, next)
+	} else {
+		ts.Series = append(ts.Series[1:], next)
+	}
+}
+
 // getMax Gets maximum value in range of ts
 // rng (range) allows you to work only with the data you are graphing and not the full capacity.
 func (ts *timeSeries) getMax(rng int) (max float64) {
@@ -166,7 +175,7 @@ func genXBasic(length int, inverse bool) []string {
 }
 
 func renderloop(g *ui.LineChart) {
-	ts := timeSeries{Capacity: 64000}
+	ts := timeSeries{Capacity: 125000} // 1MB/64bits "reasonable maximum"
 	// render loop
 	for {
 		// putting this in the loop helps to deal with window changes.
@@ -192,7 +201,9 @@ func renderloop(g *ui.LineChart) {
 				ui.Render(g, warn)
 			}
 		} else {
-			ts.Series = append(ts.Series, nextval)
+			//append next value
+			ts.append(nextval)
+			// merge ts.series with g.Data and recalculate DataLabels
 			if len(ts.Series) >= g.GetCapacity() {
 				g.DataLabels = genXBasic(g.GetCapacity(), true)
 				g.Data = ts.Series[(len(ts.Series) - g.GetCapacity()):]

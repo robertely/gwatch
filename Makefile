@@ -11,7 +11,7 @@ PACKAGE_OUT = packages
 
 LDFLAGS=-ldflags "-X=main.Version=$(VERSION) -X=main.Build=$(BUILD)"
 
-all: test build install
+default: clean test build package
 
 test:
 	go test ./...
@@ -60,4 +60,4 @@ package_rpm:
 clean:
 	rm -rf $(BUILD_ROOT)
 	rm -rf $(PACKAGE_OUT)
-	rm gwatch
+	rm -f $(NAME)

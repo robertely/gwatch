@@ -4,6 +4,9 @@ go:
   - 1.8.x
   - master
 
+rvm:
+  - 2.4.0
+
 matrix:
   allow_failures:
     - go: master

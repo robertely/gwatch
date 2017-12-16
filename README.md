@@ -1,10 +1,11 @@
-# gwatch
+# gwatch ![travis-ci](https://api.travis-ci.org/robertely/gwatch.svg?branch=master)
 
-Attempts to mimic the cli behavior of procps-ng `$ watch` but output is graphed (technically plotted) instead of printed.
+Attempts to mimic the cli behavior of procps-ng `$ watch` but the output is graphed (technically plotted) instead of printed.
 `gwatch` will graph the first number it is able to find and discard every thing else.
 
 ```
-graphing watch: expects numerical values, graphs the first one it sees.
+graphing watch: execute a program periodically, graphing the output fullscreen
+
 
 Usage: gwatch [-behtvx] [-n value] [parameters ...]
  -b, --beep      beep if command has a non-zero exit

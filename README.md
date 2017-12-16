@@ -1,4 +1,4 @@
-# gwatch ![travis-ci](https://api.travis-ci.org/robertely/gwatch.svg?branch=master)
+# gwatch [![Build Status](https://travis-ci.org/robertely/gwatch.svg?branch=master)](https://travis-ci.org/robertely/gwatch)
 
 Attempts to mimic the cli behavior of procps-ng `$ watch` but the output is graphed (technically plotted) instead of printed.
 `gwatch` will graph the first number it is able to find and discard every thing else.

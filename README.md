@@ -20,8 +20,8 @@ sudo dpkg -i gwatch_0.0.3_amd64.deb
 
 ##### cent-ish
 ```
-wget rpm -ivh
 wget https://github.com/robertely/gwatch/releases/download/0.0.3/gwatch-0.0.3-1.x86_64.rpm
+sudo rpm -ivh gwatch-0.0.3-1.x86_64.rpm
 ```
 
 ##### from source

@@ -3,6 +3,36 @@
 Attempts to mimic the cli behavior of procps-ng `$ watch` but the output is graphed (technically plotted) instead of printed.
 `gwatch` will graph the first number it is able to find and discard every thing else.
 
+![Gif of gwatch demo](https://i.imgur.com/10x23py.gif)
+
+## Installation
+
+##### OSX
+```
+brew install robertely/gwatch/gwatch
+```
+
+##### debian-ish
+```
+wget https://github.com/robertely/gwatch/releases/download/0.0.3/gwatch_0.0.3_amd64.deb
+sudo dpkg -i gwatch_0.0.3_amd64.deb
+```
+
+##### cent-ish
+```
+wget rpm -ivh
+wget https://github.com/robertely/gwatch/releases/download/0.0.3/gwatch-0.0.3-1.x86_64.rpm
+```
+
+##### from source
+```
+git clone git@github.com:robertely/gwatch.git
+cd gwatch
+go get ./...
+go build
+```
+
+## Usage
 ```
 graphing watch: execute a program periodically, graphing the output fullscreen
 
@@ -18,7 +48,7 @@ Usage: gwatch [-behtvx] [-n value] [parameters ...]
  -x, --exec      pass command to exec instead of "sh -c"
 
 ```
-## Recipes:
+## Examples
 ###### OSX Load:
 `$ gwatch 'sysctl -n vm.loadavg | cut -d" " -f2'`
 

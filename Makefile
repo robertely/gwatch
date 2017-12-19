@@ -74,7 +74,8 @@ package_homebrew:
 	cp $(BINARIES_OUT)/darwin/gwatch $(BUILD_ROOT)/darwin/
 	chmod 555 $(BUILD_ROOT)/darwin/gwatch
 	cp gwatch.1 $(BUILD_ROOT)/darwin/
-	tar -C $(BUILD_ROOT)/darwin -zcvf gwatch-$(VERSION).tar.gz gwatch gwatch.1
+	gzip $(BUILD_ROOT)/darwin/gwatch.1
+	tar -C $(BUILD_ROOT)/darwin -zcvf gwatch-$(VERSION).tar.gz gwatch gwatch.1.gz
 	mv gwatch-$(VERSION).tar.gz packages
 
 

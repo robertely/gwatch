@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 
 NAME = gwatch
-VERSION = 0.0.2
+VERSION = 0.0.3
 DESCTIPTION = "execute a program periodically, graphing the output fullscreen"
 BUILD_ROOT = build
 BUILD_REV = `git rev-parse HEAD`
@@ -10,6 +10,7 @@ BUILD_DATE = `date`
 PACKAGE_OUT = packages
 BINARIES_OUT = binaries
 
+# TODO use this like at all
 LDFLAGS=-ldflags "-X=main.Version=$(VERSION) -X=main.Build=$(BUILD)"
 
 default: clean test build package

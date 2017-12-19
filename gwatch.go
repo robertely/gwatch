@@ -53,7 +53,7 @@ func (c *config) Validate() {
 	// Version
 	if c.Version == true {
 		// TODO version managed by Makefile
-		fmt.Println("gwatch from https://github.com/robertely/gwatch 0.0.2")
+		fmt.Println("gwatch from https://github.com/robertely/gwatch 0.0.3")
 		os.Exit(0)
 	}
 

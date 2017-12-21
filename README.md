@@ -43,6 +43,7 @@ Usage: gwatch [-behtvx] [-n value] [parameters ...]
  -h, --help      display this help and exit
  -n, --interval=value
                  seconds to wait between updates
+ -s, --stats     show basic statistics below graph
  -t, --no-title  turn off header
  -v, --version   output version information and exit
  -x, --exec      pass command to exec instead of "sh -c"
@@ -56,7 +57,7 @@ Usage: gwatch [-behtvx] [-n value] [parameters ...]
 `$ gwatch "vm_stat | grep 'Pages free'"`
 
 ###### Used memory percent:
-`$ gwatch -n .1 "free | grep Mem | awk '{print \$3/\$2 * 100.0}'"`
+`$ gwatch -s -n .06 "free | grep Mem | awk '{print 100-(\$3/\$2 * 100.0)}'"`
 
 ###### Total time for get request via curl:
 `$ gwatch "curl -w "%{time_total}" -o /dev/null -s 'https://google.com'"`

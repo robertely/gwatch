@@ -45,6 +45,7 @@ var conf = config{
 	Beep:      false,
 	ErrExit:   false,
 	Exec:      false,
+	ShowStats: false,
 	Help:      false,
 	Version:   false}
 
@@ -53,7 +54,7 @@ func (c *config) Validate() {
 	// Version
 	if c.Version == true {
 		// TODO version managed by Makefile
-		fmt.Println("gwatch from https://github.com/robertely/gwatch 0.0.3")
+		fmt.Println("gwatch from https://github.com/robertely/gwatch 0.0.4")
 		os.Exit(0)
 	}
 
@@ -106,6 +107,19 @@ func warningdialog(msg string) ui.Bufferer {
 	return warn
 }
 
+// lowerdisplay retruns a new ui.Par
+// The intended use is for data set metadata
+func lowerdisplay(msg string) ui.Bufferer {
+	lower := ui.NewPar(msg)
+	lower.Height = 1
+	lower.Width = len(msg)
+	lower.Y = ui.TermHeight() - 1
+	lower.X = ui.TermWidth() - lower.Width - 1
+	lower.Border = false
+	lower.TextFgColor = ui.ColorGreen
+	return lower
+}
+
 // timeSeries thinly wraps []float64 adding a hard limit(Capacity.)
 type timeSeries struct {
 	Series   []float64
@@ -119,42 +133,6 @@ func (ts *timeSeries) append(next float64) {
 	} else {
 		ts.Series = append(ts.Series[1:], next)
 	}
-}
-
-// getMax Gets maximum value in range of ts
-// rng (range) allows you to work only with the data you are graphing and not the full capacity.
-func (ts *timeSeries) getMax(rng int) (max float64) {
-	for _, i := range ts.Series {
-		if i > max {
-			max = i
-		}
-	}
-	return
-}
-
-// getMin Gets minumum value in range of ts
-// rng (range) allows you to work only with the data you are graphing and not the full capacity.
-func (ts *timeSeries) getMin(rng int) (min float64) {
-	min = ts.Series[0]
-	for _, i := range ts.Series {
-		if i < min {
-			min = i
-		}
-	}
-	return
-}
-
-// getAvg Gets simple average for in range of ts
-// rng (range) allows you to work only with the data you are graphing and not the full capacity.
-func (ts *timeSeries) getAvg(rng int) (avg float64) {
-	return
-}
-
-// getStDev Gets standard deviation in range of ts
-// rng (range) allows you to work only with the data you are graphing and not the full capacity.
-func (ts *timeSeries) getStDev(rng int) (stdev float64) {
-	// TODO: This.
-	return
 }
 
 // genXBasic generates xaxis labels.
@@ -182,6 +160,7 @@ func renderloop(g *ui.LineChart) {
 		// putting this in the loop helps to deal with window changes.
 		g.Width = ui.TermWidth()
 		g.Height = ui.TermHeight()
+
 		nextval, err := shellOutForNum(conf.Arguments)
 		if err != nil {
 			if conf.Beep == true {
@@ -214,7 +193,16 @@ func renderloop(g *ui.LineChart) {
 			}
 			// Render
 			ui.Clear()
-			ui.Render(g)
+			if conf.ShowStats {
+				min := ui.ShortenFloatVal(util.GetMin(g.Data))
+				max := ui.ShortenFloatVal(util.GetMax(g.Data))
+				avg := ui.ShortenFloatVal(util.GetAvg(g.Data))
+				std := ui.ShortenFloatVal(util.GetStD(g.Data))
+				s := fmt.Sprintf(" Min:%s Max:%s Avg:%s StD:%s ", min, max, avg, std)
+				ui.Render(g, lowerdisplay(s))
+			} else {
+				ui.Render(g)
+			}
 		}
 		// Sleep
 		time.Sleep(time.Millisecond * time.Duration(conf.Interval*1000))
@@ -228,6 +216,8 @@ func init() {
 	getopt.FlagLong(&conf.NoTitle, "no-title", 't', "turn off header")
 	getopt.FlagLong(&conf.ErrExit, "errexit", 'e', "exit if command has a non-zero exit")
 	getopt.FlagLong(&conf.Exec, "exec", 'x', "directly pass command to os.exec instead of \"sh -c\"")
+	// gwatch
+	getopt.FlagLong(&conf.ShowStats, "stats", 's', "show basic statistics below graph")
 	//meta
 	getopt.FlagLong(&conf.Help, "help", 'h', "display this help and exit")
 	getopt.FlagLong(&conf.Version, "version", 'v', "output version information and exit")
@@ -269,7 +259,7 @@ func main() {
 
 	// Set title
 	if conf.NoTitle != true {
-		g.BorderLabel = "Every " + strconv.FormatFloat(conf.Interval, 'f', -1, 64) + "s: " + strings.Join(conf.Arguments, " ")
+		g.BorderLabel = " Every " + strconv.FormatFloat(conf.Interval, 'f', -1, 64) + "s: " + strings.Join(conf.Arguments, " ") + " "
 	}
 
 	// Handle resize. I strongly suspect this isn't working perfectly in OSX

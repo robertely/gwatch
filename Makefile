@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 
 NAME = gwatch
-VERSION = 0.0.3
+VERSION = 0.0.4
 DESCTIPTION = "execute a program periodically, graphing the output fullscreen"
 BUILD_ROOT = build
 BUILD_REV = `git rev-parse HEAD`
